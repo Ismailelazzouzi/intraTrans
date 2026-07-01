@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+/* ── Design System Theme ─────────────────────────────────── */
+@theme {
+  /* ----- Colors: Brand & Accent ----- */
+  --color-brand-primary: #10b981;
+  --color-brand-success: #34d399;
+  --color-brand-warning: #fbbf24;
+  --color-brand-error: #fb7185;
+  --color-brand-info: #60a5fa;
+
+  /* ----- Colors: Surfaces ----- */
+  --color-surface-background: #020617;
+  --color-surface-panel: #0f172a;
+  --color-surface-overlay: rgba(15, 23, 42, 0.4);
+  --color-surface-elevated: #1e293b;
+
+  /* ----- Colors: Borders ----- */
+  --color-border-default: #1e293b;
+  --color-border-subtle: #334155;
+  --color-border-accent: rgba(16, 185, 129, 0.2);
+
+  /* ----- Colors: Text ----- */
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #94a3b8;
+  --color-text-tertiary: #64748b;
+  --color-text-muted: #475569;
+  --color-text-accent: #34d399;
+
+  /* ----- Colors: Status ----- */
+  --color-status-pending: #fbbf24;
+  --color-status-active: #34d399;
+  --color-status-error: #fb7185;
+  --color-status-info: #60a5fa;
+
+  /* ----- Typography: Font Weights ----- */
+  --font-weight-heading: 700;
+  --font-weight-bold: 700;
+  --font-weight-semibold: 600;
+  --font-weight-medium: 500;
+
+  /* ----- Typography: Font Sizes ----- */
+  --text-heading-main: 1.875rem;
+  --text-heading-section: 1.5rem;
+  --text-heading-card: 1.125rem;
+  --text-body-normal: 0.875rem;
+  --text-body-small: 0.75rem;
+  --text-caption-dense: 0.625rem;
+  --text-caption-tiny: 0.5625rem;
+
+  /* ----- Radius Tiers ----- */
+  --radius-panel: 1rem;
+  --radius-card: 1.5rem;
+  --radius-modal: 2rem;
+  --radius-interactive: 0.75rem;
+  --radius-full: 9999px;
+}
+
+/* ----- Custom Utility Classes ----- */
+@utility animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+@utility status-dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+}
+
+@utility panel-base {
+  background-color: var(--color-surface-overlay);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-panel);
+}
+
+@utility panel-card {
+  background-color: var(--color-surface-overlay);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-card);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

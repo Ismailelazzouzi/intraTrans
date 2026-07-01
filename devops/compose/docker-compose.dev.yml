@@ -1,0 +1,139 @@
+name: hive-dev
+
+services:
+  database:
+    image: postgres:15-alpine
+    container_name: hive-database
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend-net
+    security_opt:
+      - no-new-privileges:true
+
+  vault:
+    image: hashicorp/vault:1.17
+    container_name: hive-vault-dev
+    cap_add:
+      - IPC_LOCK
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: "${VAULT_TOKEN}"
+      VAULT_DEV_LISTEN_ADDRESS: "0.0.0.0:8200"
+    ports:
+      - "8200:8200"
+    networks:
+      - backend-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8200/v1/sys/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  vault-init:
+    image: alpine:3.19
+    container_name: hive-vault-init
+    depends_on:
+      vault:
+        condition: service_healthy
+    environment:
+      VAULT_ADDR: "http://vault:8200"
+      VAULT_TOKEN: "${VAULT_TOKEN}"
+      DATABASE_URL: "${DATABASE_URL}"
+      JWT_SECRET: "${JWT_SECRET}"
+      REFRESH_SECRET: "${REFRESH_SECRET}"
+      GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID}"
+      GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET}"
+      FRONTEND_URL: "http://localhost:8080"
+      METRICS_SECRET: "${METRICS_SECRET}"
+    volumes:
+      - ../../.env:/app/.env:ro
+      - ../../scripts:/app/scripts:ro
+    networks:
+      - backend-net
+    command: sh /app/scripts/init-vault.sh
+    restart: "no"
+
+  backend:
+    build:
+      context: ../../
+      dockerfile: devops/containers/backend.Dockerfile
+    container_name: hive-backend
+    environment:
+      PORT: ${PORT}
+      DATABASE_URL: "${DATABASE_URL}"
+      VAULT_ADDR: "http://vault:8200"
+      VAULT_TOKEN: "${VAULT_TOKEN}"
+    depends_on:
+      database:
+        condition: service_healthy
+      vault-init:
+        condition: service_completed_successfully
+    networks:
+      - frontend-net
+      - backend-net
+    volumes:
+      - uploads_data:/app/uploads
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO /dev/null http://localhost:3000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    user: "node"
+
+  frontend:
+    build:
+      context: ../../
+      dockerfile: devops/containers/frontend.Dockerfile
+      args:
+        - VITE_API_URL=/api
+        - VITE_GOOGLE_AUTH_URL=/api/auth/google
+    container_name: hive-frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    networks:
+      - frontend-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO /dev/null http://127.0.0.1:8080/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    user: "nginx"
+
+volumes:
+  db_data:
+  uploads_data:
+
+networks:
+  frontend-net:
+  backend-net:
+    internal: true

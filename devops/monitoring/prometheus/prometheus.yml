@@ -1,0 +1,62 @@
+# ─── GLOBAL SETTINGS ──────────────────────────────────────────────────
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+# ─── SCRAPE CONFIGURATIONS ───────────────────────────────────────────
+scrape_configs:
+
+  # ─── Prometheus Self-Monitoring ─────────────────────────────────────
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # ─── Express Backend (Application Metrics) ──────────────────────────
+  # Collects: HTTP RED metrics, Node.js runtime, business metrics,
+  #           Socket.IO metrics, Prisma query metrics
+  - job_name: 'hive-backend'
+    dns_sd_configs:
+      - names: ['backend']
+        type: 'A'
+        port: 3000
+    metrics_path: /metrics
+    scrape_interval: 10s
+    # AUTH: Token is injected from environment at container start
+    # via entrypoint sed substitution (see docker-compose.prod.yml)
+    http_headers:
+      x-metrics-token:
+        values:
+          - "${METRICS_SECRET}"
+
+  # ─── PostgreSQL Exporter ────────────────────────────────────────────
+  # Collects: connection counts, transaction rates, table statistics,
+  #           database size, sequential vs index scans, replication lag
+  - job_name: 'postgresql'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    scrape_interval: 30s
+
+  # ─── cAdvisor (Container Metrics) ───────────────────────────────────
+  # Collects: CPU, memory, network I/O, disk I/O, restart counts
+  #           for ALL Docker containers automatically
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 15s
+
+  # ─── Nginx Exporter ────────────────────────────────────────────────
+  # Collects: active connections, accepted/handled connections,
+  #           reading/writing/waiting states, total requests
+  #
+  # NOTE: Requires nginx stub_status module enabled (see Step 4)
+  - job_name: 'nginx-gateway'
+    static_configs:
+      - targets: ['nginx-exporter:9113']
+    scrape_interval: 15s
+
+  # ─── Node Exporter (Host System Metrics) ────────────────────────────
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 15s
